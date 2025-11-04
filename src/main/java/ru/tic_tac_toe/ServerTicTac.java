@@ -51,7 +51,7 @@ public class ServerTicTac {
              OutputStream out2 = socket2.getOutputStream()) {
 
             DriverTicTac game = new DriverTicTac();
-            game.startGameServer(in1, out1, in2, out2);
+            game.startGameServerUnlimited(in1, out1, in2, out2);
 
         } catch (IOException e) {
             logger.error("error", e);

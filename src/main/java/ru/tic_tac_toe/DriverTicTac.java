@@ -4,10 +4,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
-import java.util.ArrayList;
-import java.util.InputMismatchException;
-import java.util.List;
-import java.util.Scanner;
+import java.util.*;
 
 public class DriverTicTac {
 
@@ -18,8 +15,12 @@ public class DriverTicTac {
     private static final byte[] WAIT_BYTES = "Wait...\n\r".getBytes();
     private static final byte[] CHECK_BYTES = "Enter a number from 1 to 9 corresponding to the empty field:\n\r".getBytes();
 
+    private final static List<Values> fieldStart = List.of(Values.ONE, Values.TWO, Values.THREE,
+            Values.FOUR, Values.FIVE, Values.SIX, Values.SEVEN, Values.EIGHT, Values.NINE);
+
     private final Logger logger = LoggerFactory.getLogger(DriverTicTac.class);
-    private List<Values> field;
+    private final List<Values> field = new ArrayList<>(9);
+    private final Queue<Integer> indexRemoval = new ArrayDeque<>(7);
     private Values current = Values.CROSS;
     private boolean server;
 
@@ -47,7 +48,7 @@ public class DriverTicTac {
                 }
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.error("error",e);
         }
         System.out.println("Ничья");
     }
@@ -55,8 +56,7 @@ public class DriverTicTac {
     public void startGameServer(InputStream in1, OutputStream out1, InputStream in2, OutputStream out2) {
         logger.info("start game");
         server = true;
-        String tmpStr = getBoardToString();
-        byte[] boardToByte = tmpStr.getBytes();
+        byte[] boardToByte = getBoardToString().getBytes();
         try (Scanner scanner1 = new Scanner(in1);
              Scanner scanner2 = new Scanner(in2)) {
             out1.write(boardToByte);
@@ -84,6 +84,54 @@ public class DriverTicTac {
             }
             out1.write(DRAW_BYTES);
             out2.write(DRAW_BYTES);
+        } catch (IOException e) {
+            logger.error("error",e);
+        } finally {
+            logger.info("end game");
+        }
+    }
+
+    public void startGameServerUnlimited(InputStream in1, OutputStream out1, InputStream in2, OutputStream out2) {
+        logger.info("start game");
+        server = true;
+        byte[] boardToByte;
+        try (Scanner scanner1 = new Scanner(in1);
+             Scanner scanner2 = new Scanner(in2)) {
+            do {
+                // отрисовка экрана
+                boardToByte = getBoardToString().getBytes();
+                out1.write(boardToByte);
+                out1.write(current == Values.CROSS ? YR_TURN_BYTES : WAIT_BYTES);
+                out2.write(boardToByte);
+                out2.write(current == Values.CIRCLE ? YR_TURN_BYTES : WAIT_BYTES);
+
+                // обработка входных данных
+                int in = getCorrectValue(
+                        current == Values.CROSS ? scanner1 : scanner2,
+                        current == Values.CROSS ? out1 : out2);
+                changeField(in);
+
+                // Обработка исчезающих символов
+                indexRemoval.offer(in - 1);
+                if (indexRemoval.size() == 7) {
+                    int idx = indexRemoval.poll();
+                    field.set(idx, fieldStart.get(idx));
+                }
+                if (indexRemoval.size() == 6) {
+                    int idx = indexRemoval.peek();
+                    field.set(idx, field.get(idx) == Values.CROSS ? Values.CROSS_MELT : Values.CIRCLE_MELT);
+                }
+            } while (!checkWin());
+
+            // финальная отрисовка экрана
+            boardToByte = getBoardToString().getBytes();
+            out1.write(boardToByte);
+            out2.write(boardToByte);
+
+            // кто победитель
+            out1.write(current == Values.CROSS ? LOSE_BYTES : WIN_BYTES);
+            out2.write(current == Values.CROSS ? WIN_BYTES : LOSE_BYTES);
+
         } catch (IOException e) {
             logger.error("error",e);
         } finally {
@@ -125,11 +173,8 @@ public class DriverTicTac {
         for (int i = 0; i < field.size() / 3; i++)
             if (field.get(i) == field.get(i + 3) && field.get(i + 3) == field.get(i + 6) && field.get(i) == field.get(i + 6))
                 return true;
-        if ((field.get(0) == field.get(4) && field.get(4) == field.get(8) && field.get(0) == field.get(8))
-            || (field.get(2) == field.get(4) && field.get(4) == field.get(6) && field.get(2) == field.get(6))
-        )
-            return true;
-        return false;
+        return (field.get(0) == field.get(4) && field.get(4) == field.get(8) && field.get(0) == field.get(8))
+                || (field.get(2) == field.get(4) && field.get(4) == field.get(6) && field.get(2) == field.get(6));
     }
 
     private void changeField(int in) {
@@ -139,7 +184,8 @@ public class DriverTicTac {
     }
 
     private void startBoard() {
-        field = new ArrayList<>(9);
+//        field = new ArrayList<>(9);
+        field.clear();
         field.add(Values.ONE);
         field.add(Values.TWO);
         field.add(Values.THREE);

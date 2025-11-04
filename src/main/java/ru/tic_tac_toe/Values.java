@@ -3,6 +3,8 @@ package ru.tic_tac_toe;
 enum Values {
     CROSS("\u274C", "\u001B[31m X \u001B[0m"),
     CIRCLE("\uD83D\uDFE2", "\u001B[32m O \u001B[0m"),
+    CROSS_MELT("\u274C", "\u001B[33m X \u001B[0m"),
+    CIRCLE_MELT("\uD83D\uDFE2", "\u001B[36m O \u001B[0m"),
     ONE("\u0031\uFE0F\u20E3", " 1 "),
     TWO("\u0032\uFE0F\u20E3", " 2 "),
     THREE("\u0033\uFE0F\u20E3", " 3 "),
