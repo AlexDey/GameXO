@@ -151,8 +151,7 @@ public class DriverTicTac {
                 number = scanner.nextInt();
                 if (number < 1 || number > 9)
                     throw new InputMismatchException();
-                if (field.get(number - 1) == Values.CROSS || field.get(number - 1) == Values.CIRCLE
-                    || field.get(number - 1) == Values.CROSS_MELT || field.get(number - 1) == Values.CIRCLE_MELT)
+                if (!fieldStart.contains(field.get(number - 1)))
                     throw new InputMismatchException();
                 goodValue = true;
             } catch (InputMismatchException e) {
